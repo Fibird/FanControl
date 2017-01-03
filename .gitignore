@@ -1,0 +1,8 @@
+# list file
+*.lst
+# object file
+*.obj
+# program
+*.exe
+*.hex
+*.bak
