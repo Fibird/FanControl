@@ -16,7 +16,7 @@
 		ljmp isr_t0
 
 		org 001bh
-		ljmp disp
+		ljmp motor_driv
 		
 		org 0030h
 main:	mov sp,#30h				;设置栈顶
@@ -36,27 +36,29 @@ main:	mov sp,#30h				;设置栈顶
 		mov tl1,#0fh
 		mov ie,#8ah				;允许定时器0和定时器1中断
 		setb pt0				;设置定时器1为高优先级
-		;setb tr0		;test
-		;mov r1,#60		;test
-		setb tr1				;启动定时器1				
+		mov r1,#60		;test
+		setb tr0		;test
+		;setb tr1				;启动定时器1				
 		clr f0					;开关机状态标志，默认关机
 		clr haveCount					
 
 ;主程序		
 here:	nop
-		mov dptr,#dac0832_add
-		mov a,#0				;关闭电动机
-		movx @dptr,a		
-		jnb p1.7,here			;检测是否打开开关
-		jnb p1.6,setTime			;检测是否设置定时
-		jnb haveCount,hset
-		jnb f0,here
+		;mov dptr,#dac0832_add
+		;mov a,#0				;关闭电动机
+		;movx @dptr,a
+		;clr tr1		
+		;jnb p1.7,here			;检测是否打开开关
+		;jnb p1.6,setTime			;检测是否设置定时
+		;jnb haveCount,hset
+		;jnb f0,here
 		;jb myflag,hset
 				
 hset:	mov a,p1
 		anl a,#00000011b			;取低两位作为档位
 		mov gear,a							
-		call motor_driv		  				
+		;call motor_driv
+		call disp		  				
 		jmp here
 ;定时时间设置
 setTime: 
@@ -69,7 +71,7 @@ again:	mov r1,#60
 		ret
 ;中断服务子程序0，主要负责定时时间的修改		
 isr_t0: push acc
-		jnb f0,ret0			;判断标志位
+		;jnb f0,ret0			;判断标志位
 		mov th0,#0bh
 		mov tl0,#0cdh
 		mov r6,30h
@@ -92,11 +94,7 @@ ret0:	pop acc
 		reti
 
 ;中断处理子程序1，主要负责实时显示7段数码管
-disp:	push acc
-		push dpl
-		push dph
-		push 3
-		mov r3,#0feh	  ;存放位码
+disp:	mov r3,#0feh	  ;存放位码
 		mov r0,#buf_add	  ;存放段码的地址
 loop1:	mov a,@r0	
 		mov dptr,#disdata
@@ -118,6 +116,10 @@ loop2:	nop
 		mov dptr,#pa_add
 		movx @dptr,a
 
+		mov r5,#10h		 	;延时0
+loop3:	nop
+		djnz r5,loop3
+
 		inc r0
 		mov a,r3 
 		jnb acc.5,ret1		;判断是否扫描到第5位
@@ -130,14 +132,13 @@ loop2:	nop
 		movx @dptr,a
 		jmp loop1
 		
-ret1:	pop 3
-		pop dph
-		pop dpl
-		pop acc	
-		reti
+ret1:	ret
 ;电动机驱动程序
-motor_driv:	jnb f0,next_ch
-next_ch:	jb haveCount,ret2			
+motor_driv:	push acc
+			push dpl
+			push dph
+			;jnb f0,next_ch
+;next_ch:	jb haveCount,ret2			
 			mov dptr,#gear_value
 			mov a,gear			;以gear作为偏移量取出档位
 			movc a,@a+dptr
@@ -158,7 +159,10 @@ delay2:		nop
 			nop
 			nop
 			djnz r4,delay2
-ret2:		ret
+ret2:		pop dph
+			pop dpl
+			pop acc
+			reti
 ;将定时时间置位，即全设置为横杠
 reset:		mov buf_add,#11
 			mov buf_add+1,#11
