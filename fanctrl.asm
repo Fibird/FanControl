@@ -40,49 +40,42 @@ main:	mov sp,#30h				;设置栈顶
 		mov ie,#8ah				;允许定时器0和定时器1中断
 		setb pt0				;设置定时器1为高优先级
 		mov r1,#60		;test
-		setb tr0		;test
+		;setb tr0		;test
 		setb tr1				;启动定时器1				
 		clr f0					;开关机状态标志，默认关机
 		clr haveCount					
 
 ;主程序		
 here:	nop
-		;mov dptr,#dac0832_add
-		;mov a,#0				;关闭电动机
-		;movx @dptr,a
-		;clr tr1		
-		;jnb p1.7,here			;检测是否打开开关
-		;jnb p1.6,setTime			;检测是否设置定时
-		;jnb haveCount,hset
-		;jnb f0,here
-		;jb myflag,hset
-				
-hset:	mov a,p1
-		anl a,#00000011b			;取低两位作为档位
+		clr f0	
+		jnb p1.7,here			;检测是否打开开关
+		setb f0
+		jnb p1.6,hset			;检测是否设置定时
+		call setTime
+		jmp get_g						
+hset:	call reset
+get_g:	mov a,p1				;读取档位
+		anl a,#00000011b		;取低两位作为档位
 		mov gear,a							
-		;call motor_driv
 		call disp		  				
 		jmp here
 ;定时时间设置
 setTime: 
-again:	mov r1,#60  
-
-		jb p1.6,again
+again:	 
 	   	setb tr0			;打开定时器0
-		setb f0				
-		setb haveCount
+		;setb f0				
 		ret
 ;中断服务子程序0，主要负责定时时间的修改		
 isr_t0: push acc
 		;jnb f0,ret0			;判断标志位
 		mov th0,#0bh
-		mov tl0,#0cdh
+		mov tl0,#0cdh		
 		mov r6,30h
 		dec r6
 		mov 30h,r6
 		cjne r6,#0,ret0
-		
-		mov 30h,#int_times		;重置中断次数
+
+next1:	mov 30h,#int_times		;重置中断次数
 		mov a,r1
 		mov b,#10
 		div ab
@@ -146,10 +139,12 @@ motor_driv:
 			push dpl
 			push dph
 			push psw
-			;jnb f0,mstop
-			;jnb tr0,mstop
+			jnb f0,mstop
+			jnb p1.6,movit
+			mov a,r1
+			jz mstop
 ;------------低电平脉冲--------------			
-			mov a,temp+1
+movit:		mov a,temp+1
 			jz send_h			
 			mov dptr,#gear_value
 			mov a,gear			;以gear作为偏移量取出档位
