@@ -2,11 +2,13 @@
 		pb_add equ 0ff29h
 		pc_add equ 0ff2ah
 		pcon_add equ 0ff2bh
+		dac0832_add equ 0ff80h
 		int_times equ 0ah
+		low_times equ 150
 		buf_add equ 79h
 		gear equ 50h		;存储档位
-		temp equ 51h
-		dac0832_add equ 0ff80h
+		temp equ 51h		;临时存储区
+
 		haveCount bit 2dh  
 		
 		org 0000h
@@ -28,7 +30,8 @@ main:	mov sp,#30h				;设置栈顶
 		mov buf_add+4,#0ah
 		mov buf_add+5,#0ah
 	
-		mov 30h,#int_times		;设置中断次数	
+		mov 30h,#int_times		;设置中断次数
+		mov temp+1,#low_times			;低电平次数	
 		mov tmod,#21h	 
 		mov th0,#0bh			;初始化定时器0	 
 		mov tl0,#0cdh
@@ -38,7 +41,7 @@ main:	mov sp,#30h				;设置栈顶
 		setb pt0				;设置定时器1为高优先级
 		mov r1,#60		;test
 		setb tr0		;test
-		;setb tr1				;启动定时器1				
+		setb tr1				;启动定时器1				
 		clr f0					;开关机状态标志，默认关机
 		clr haveCount					
 
@@ -133,33 +136,56 @@ loop3:	nop
 		jmp loop1
 		
 ret1:	ret
-;电动机驱动程序
-motor_driv:	push acc
+;***********电动机驱动程序**************
+;
+;
+;***************************************
+motor_driv:	
+;------------保护现场--------------
+			push acc
 			push dpl
 			push dph
-			;jnb f0,next_ch
-;next_ch:	jb haveCount,ret2			
+			push psw
+			;jnb f0,mstop
+			;jnb tr0,mstop
+;------------低电平脉冲--------------			
+			mov a,temp+1
+			jz send_h			
 			mov dptr,#gear_value
 			mov a,gear			;以gear作为偏移量取出档位
 			movc a,@a+dptr
-			mov r4,a			;延时2的时间
-			mov dptr,#dac0832_add
+			mov r4,a			;高电平的次数
+			mov temp,r4
+
+			mov dptr,#dac0832_add		;发送低电平
 			mov a,#80h
 			movx @dptr,a
-			mov temp,#150		;延时1的时间
-delay1:		nop
-			nop
-			nop
-			nop
-			djnz temp,delay1
+			
+			dec temp+1
+			jmp ret2
+;------------高电平脉冲--------------
+send_h:		mov dptr,#gear_value
+			mov a,gear			;以gear作为偏移量取出新档位
+			movc a,@a+dptr
+							
+			clr c				 ;更新校准高电平次数
+			subb a,temp
+			add a,r4
+
+			mov dptr,#dac0832_add		;发送高电平
 			mov a,#0ffh
 			movx @dptr,a
-delay2:		nop
-			nop
-			nop
-			nop
-			djnz r4,delay2
-ret2:		pop dph
+
+			dec r4
+			cjne r4,#0,ret2
+			mov temp+1,#low_times
+;------------停止脉冲--------------
+mstop:		mov dptr,#dac0832_add
+			mov a,#0h
+			movx @dptr,a
+;------------中断返回--------------
+ret2:		pop psw
+			pop dph
 			pop dpl
 			pop acc
 			reti
