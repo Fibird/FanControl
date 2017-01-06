@@ -9,9 +9,12 @@
 		pc_add equ 0ff2ah
 		pcon_add equ 0ff2bh
 		dac0832_add equ 0ff80h
-;===============常用内存空间===================
+;===============常用值===================
 		int_times equ 0dh	;中断int_times次为1秒
 		low_times equ 150	;低脉冲次数
+		default_min equ 5
+		default_sec equ 60
+;===============常用内存空间===================
 		count_value equ 60h	;计数值缓冲区
 		count_value1 equ 61h	;分钟
 		buf_add equ 79h		;数码管缓冲区首址
@@ -91,8 +94,13 @@ get_g:	mov a,p1				;读取档位
 		mov gear,a							
 		call disp				;扫描七段数码管和LED灯		  				
 		jmp here
-
-set_t: 	mov c,p1.5				;定时时间设置
+;**************时间调节程序***************
+;功能：读取开关调节时间
+;输入参数：无
+;输出参数：无
+;*****************************************
+set_t: 	push psw
+		mov c,p1.5				;定时时间设置
 		mov E,c
 		cpl c
 		mov NOE,c
@@ -162,6 +170,7 @@ dec1:	dec count_value1			;开关变化计数值减1
 		mov c,p1.2
 		mov bitbuff3,c
 goon:  	setb tr0				;打开定时器0
+		pop psw
 		ret
 ;-------------------------------
 ;**************位异或程序*****************
@@ -325,8 +334,8 @@ ret2:		pop psw
 ;输出参数：无
 ;**********************************************
 reset:		clr tr0
-			mov count_value1,#2
-			mov count_value,#60
+			mov count_value1,#default_min
+			mov count_value,#default_sec
 			mov buf_add,#11
 			mov buf_add+1,#11
 			mov buf_add+2,#11
