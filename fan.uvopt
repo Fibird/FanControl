@@ -172,10 +172,10 @@
       <FileType>2</FileType>
       <tvExp>0</tvExp>
       <Focus>0</Focus>
-      <ColumnNumber>18</ColumnNumber>
+      <ColumnNumber>14</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>1</TopLine>
-      <CurrentLine>1</CurrentLine>
+      <TopLine>91</TopLine>
+      <CurrentLine>91</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>.\fanctrl.asm</PathWithFileName>
       <FilenameWithoutPath>fanctrl.asm</FilenameWithoutPath>
@@ -1527,9 +1527,9 @@
       <Documents>
         <Doc>
           <Name>.\fanctrl.asm</Name>
-          <ColumnNumber>18</ColumnNumber>
-          <TopLine>1</TopLine>
-          <CurrentLine>1</CurrentLine>
+          <ColumnNumber>14</ColumnNumber>
+          <TopLine>91</TopLine>
+          <CurrentLine>91</CurrentLine>
         </Doc>
       </Documents>
     </MDIGroup>

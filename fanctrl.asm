@@ -19,8 +19,13 @@
 
 		org 001bh
 		ljmp motor_driv
-		
+;***************主程序*********************
+;完成各种定时器的初始化设置，中断及其优先
+;级的设置，输入输出控制的设置以及8255的初
+;始化设置。
+;******************************************		
 		org 0030h
+;初始化设置
 main:	mov sp,#30h				;设置栈顶
 		mov r0,#0
 		mov dptr,#pcon_add		;初始化8255	 
@@ -44,8 +49,8 @@ main:	mov sp,#30h				;设置栈顶
 		setb tr1				;启动定时器1				
 		clr f0					;开关机状态标志，默认关机
 		clr haveCount					
-
-;主程序		
+;-----------------------------
+;循环检测开关，并扫描七段数码管
 here:	nop
 		clr f0	
 		jnb p1.7,here			;检测是否打开开关
@@ -59,15 +64,18 @@ get_g:	mov a,p1				;读取档位
 		mov gear,a							
 		call disp		  				
 		jmp here
+;-------------------------------
 ;定时时间设置
 setTime: 
-again:	 
-	   	setb tr0			;打开定时器0
-		;setb f0				
+	 
+	   	setb tr0			;打开定时器0				
 		ret
-;中断服务子程序0，主要负责定时时间的修改		
+;***********计时程序*********************
+;中断服务子程序0，主要负责定时时间的修改
+;
+;****************************************		
 isr_t0: push acc
-		;jnb f0,ret0			;判断标志位
+		jnb f0,ret0			;判断标志位
 		mov th0,#0bh
 		mov tl0,#0cdh		
 		mov r6,30h
@@ -88,8 +96,10 @@ check0:	cjne r1,#0,dec_f 		;到达定时时间
 dec_f:	dec r1
 ret0:	pop acc
 		reti
-
-;中断处理子程序1，主要负责实时显示7段数码管
+;**************七段数码管扫描程序****************
+;主要负责扫描七段数码管的保证计时时间的正常显示，
+;另外也负责扫描LED灯，保证档位的正常显示
+;************************************************
 disp:	mov r3,#0feh	  ;存放位码
 		mov r0,#buf_add	  ;存放段码的地址
 loop1:	mov a,@r0	
@@ -130,7 +140,7 @@ loop3:	nop
 		
 ret1:	ret
 ;***********电动机驱动程序**************
-;
+;中断服务子程序2，主要负责驱动电动机
 ;
 ;***************************************
 motor_driv:	
@@ -185,13 +195,14 @@ ret2:		pop psw
 			pop acc
 			reti
 ;将定时时间置位，即全设置为横杠
-reset:		mov buf_add,#11
+reset:		clr tr0
+			mov buf_add,#11
 			mov buf_add+1,#11
 			mov buf_add+2,#11
 			mov buf_add+3,#11
 			ret 
 
-disdata: db 0c0h,0f9h,0a4h,0b0h,99h,92h,82h,0f8h,80h,90h,0ffh
+disdata: db 0c0h,0f9h,0a4h,0b0h,99h,92h,82h,0f8h,80h,90h,0ffh	;数码管字形码
 reset_sym: db 0bfh					;不设置定时时，7段数码管显示的符号
 gear_value: db 5,75,150,0  			;四个档位值
 gear_led: db 7fh,0bfh,0dfh,0efh	;四个档位对应的LED灯
