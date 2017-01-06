@@ -83,6 +83,15 @@ here:	nop
 		setb f0
 		jnb p1.6,noset			;检测是否设置定时
 		call disp
+		call set_t				
+		jmp get_g						
+noset:	call reset
+get_g:	mov a,p1				;读取档位
+		anl a,#00000011b		;取低两位作为档位
+		mov gear,a							
+		call disp				;扫描七段数码管和LED灯		  				
+		jmp here
+
 set_t: 	mov c,p1.5				;定时时间设置
 		mov E,c
 		cpl c
@@ -93,7 +102,11 @@ set_t: 	mov c,p1.5				;定时时间设置
 		mov NOF,c
 		call bxrl
 		jnc next_s
-		inc count_value			;开关变化计数值加1	
+		mov a,count_value
+		cjne a,#60,inc0
+		mov count_value,#0
+		dec count_value
+inc0:	inc count_value			;开关变化计数值加1	
 		mov c,p1.5
 		mov bitbuff0,c
 next_s:	mov c,p1.4
@@ -124,7 +137,11 @@ min:	mov c,p1.3
 		mov NOF,c
 		call bxrl
  		jnc next_m
-		inc count_value1			;开关变化计数值减1
+		mov a,count_value1
+		cjne a,#60,inc1
+		mov count_value1,#0
+		dec count_value1
+inc1:	inc count_value1			;开关变化计数值减1
 		mov c,p1.3
 		mov bitbuff2,c
 next_m:	mov c,p1.2
@@ -144,14 +161,8 @@ next_m:	mov c,p1.2
 dec1:	dec count_value1			;开关变化计数值减1
 		mov c,p1.2
 		mov bitbuff3,c
-goon:  	setb tr0				;打开定时器0				
-		jmp get_g						
-noset:	call reset
-get_g:	mov a,p1				;读取档位
-		anl a,#00000011b		;取低两位作为档位
-		mov gear,a							
-		call disp				;扫描七段数码管和LED灯		  				
-		jmp here
+goon:  	setb tr0				;打开定时器0
+		ret
 ;-------------------------------
 ;**************位异或程序*****************
 ;功能：对两个位进行异或
