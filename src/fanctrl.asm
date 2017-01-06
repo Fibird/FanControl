@@ -10,7 +10,7 @@
 		pcon_add equ 0ff2bh
 		dac0832_add equ 0ff80h
 ;===============常用内存空间===================
-		int_times equ 04h	;中断int_times次为1秒
+		int_times equ 0dh	;中断int_times次为1秒
 		low_times equ 150	;低脉冲次数
 		count_value equ 60h	;计数值缓冲区
 		count_value1 equ 61h	;分钟
