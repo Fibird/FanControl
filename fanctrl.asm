@@ -5,14 +5,16 @@
 		dac0832_add equ 0ff80h
 		int_times equ 0ah
 		low_times equ 150
+		count_value equ 60h
 		buf_add equ 79h
 		gear equ 50h		;存储档位
 		temp equ 51h		;临时存储区
-		bitbuff bit 20h		;位缓冲区大小为3  
-		E bit 25h
-		F bit 26h
-		NOE bit 27h
-		NOF bit 28h
+		bitbuff bit 00h		;位缓冲区大小为3  
+		E bit 20h
+		F bit 21h
+		NOE bit 22h
+		NOF bit 23h
+
 		org 0000h
 		ljmp main
 
@@ -46,7 +48,7 @@ main:	mov sp,#30h				;设置栈顶
 		mov tl1,#0fh
 		mov ie,#8ah				;允许定时器0和定时器1中断
 		setb pt0				;设置定时器1为高优先级
-		mov r1,#60		;test
+		mov count_value,#60		;test
 		;setb tr0		;test
 		setb tr1				;启动定时器1				
 		clr f0					;开关机状态标志，默认关机
@@ -61,8 +63,7 @@ here:	nop
 		jnb p1.7,here			;检测是否打开开关
 		setb f0
 		jnb p1.6,noset			;检测是否设置定时
-;定时时间设置
-set_t: 	mov c,p1.5
+set_t: 	mov c,p1.5				;定时时间设置
 		mov E,c
 		cpl c
 		mov NOE,c
@@ -72,10 +73,7 @@ set_t: 	mov c,p1.5
 		mov NOF,c
 		call bxrl
 		jnc next_b
-		mov a,r1
-		add a,#1
-		da a
-		mov r1,a
+		inc count_value		
 		mov c,p1.5
 		mov bitbuff,c
 next_b:	mov c,p1.4
@@ -88,10 +86,7 @@ next_b:	mov c,p1.4
 		mov NOF,c
 		call bxrl
  		jnc goon
-		mov a,r1
-		add a,#-1
-		da a
-		mov r1,a
+		dec count_value
 		mov c,p1.4
 		mov bitbuff,c
 goon:  	setb tr0			;打开定时器0				
@@ -108,7 +103,7 @@ get_g:	mov a,p1				;读取档位
 ;输入参数:E，F, NOE, NOF
 ;返回参数:CY
 ;*****************************************
-bxrl:	mov c,f
+bxrl:	mov c,F
 		anl c,NOE
 		mov bitbuff+2,c
 		mov c,E
@@ -130,16 +125,16 @@ isr_t0: push acc
 		cjne r6,#0,ret0
 
 next1:	mov 30h,#int_times		;重置中断次数
+		mov r1,count_value
 		mov a,r1
 		mov b,#10
 		div ab
 		mov buf_add+0,b
 		mov buf_add+1,a
 check0:	cjne r1,#0,dec_f 		;到达定时时间
-		clr f0					;设置标志位
-		clr tr0
 		jmp ret0				
 dec_f:	dec r1
+		mov count_value,r1
 ret0:	pop psw
 		pop acc
 		reti
@@ -198,7 +193,7 @@ motor_driv:
 			push psw
 			jnb f0,mstop
 			jnb p1.6,movit
-			mov a,r1
+			mov a,count_value
 			jz mstop
 ;------------低电平脉冲--------------			
 movit:		mov a,temp+1
@@ -243,6 +238,7 @@ ret2:		pop psw
 			reti
 ;将定时时间置位，即全设置为横杠
 reset:		clr tr0
+			mov count_value,#60
 			mov buf_add,#11
 			mov buf_add+1,#11
 			mov buf_add+2,#11
