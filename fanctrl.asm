@@ -9,7 +9,9 @@
 		buf_add equ 79h
 		gear equ 50h		;存储档位
 		temp equ 51h		;临时存储区
-		bitbuff bit 00h		;位缓冲区大小为3  
+		bitbuff0 bit 00h		;位缓冲区
+		bitbuff1 bit 01h
+		bitbuff2 bit 02h  
 		E bit 20h
 		F bit 21h
 		NOE bit 22h
@@ -48,14 +50,14 @@ main:	mov sp,#30h				;设置栈顶
 		mov tl1,#0fh
 		mov ie,#8ah				;允许定时器0和定时器1中断
 		setb pt0				;设置定时器1为高优先级
-		mov count_value,#60		;test
-		;setb tr0		;test
+		mov count_value,#60		;设置默认定时时间
+		setb tr0				;打开定时器0
 		setb tr1				;启动定时器1				
 		clr f0					;开关机状态标志，默认关机
 		mov c,p1.5				
-		mov bitbuff,c
+		mov bitbuff0,c
 		mov c,p1.4
-		mov bitbuff+1,c					
+		mov bitbuff1,c					
 ;-----------------------------
 ;循环检测开关，并扫描七段数码管
 here:	nop
@@ -67,7 +69,7 @@ set_t: 	mov c,p1.5				;定时时间设置
 		mov E,c
 		cpl c
 		mov NOE,c
-		mov c,bitbuff
+		mov c,bitbuff0
 		mov F,c
 		cpl c
 		mov NOF,c
@@ -75,12 +77,12 @@ set_t: 	mov c,p1.5				;定时时间设置
 		jnc next_b
 		inc count_value		
 		mov c,p1.5
-		mov bitbuff,c
+		mov bitbuff0,c
 next_b:	mov c,p1.4
 		mov E,c
 		cpl c
 		mov NOE,c
-		mov c,bitbuff+1
+		mov c,bitbuff1
 		mov F,c
 		cpl c
 		mov NOF,c
@@ -88,7 +90,7 @@ next_b:	mov c,p1.4
  		jnc goon
 		dec count_value
 		mov c,p1.4
-		mov bitbuff,c
+		mov bitbuff1,c
 goon:  	setb tr0			;打开定时器0				
 		jmp get_g						
 noset:	call reset
@@ -105,10 +107,10 @@ get_g:	mov a,p1				;读取档位
 ;*****************************************
 bxrl:	mov c,F
 		anl c,NOE
-		mov bitbuff+2,c
+		mov bitbuff2,c
 		mov c,E
 		anl c,NOF
-		orl c,bitbuff+2
+		orl c,bitbuff2
 		ret
 ;***********计时程序*********************
 ;中断服务子程序0，主要负责定时时间的修改
@@ -116,6 +118,14 @@ bxrl:	mov c,F
 ;****************************************		
 isr_t0: push acc
 		push psw
+
+		mov r1,count_value		;更新缓冲区内的值
+		mov a,r1
+		mov b,#10
+		div ab
+		mov buf_add+0,b
+		mov buf_add+1,a
+
 		jnb f0,ret0			;判断标志位
 		mov th0,#0bh
 		mov tl0,#0cdh		
@@ -125,12 +135,12 @@ isr_t0: push acc
 		cjne r6,#0,ret0
 
 next1:	mov 30h,#int_times		;重置中断次数
-		mov r1,count_value
-		mov a,r1
-		mov b,#10
-		div ab
-		mov buf_add+0,b
-		mov buf_add+1,a
+		;mov r1,count_value
+		;mov a,r1
+		;mov b,#10
+		;div ab
+		;mov buf_add+0,b
+		;mov buf_add+1,a
 check0:	cjne r1,#0,dec_f 		;到达定时时间
 		jmp ret0				
 dec_f:	dec r1
@@ -237,8 +247,7 @@ ret2:		pop psw
 			pop acc
 			reti
 ;将定时时间置位，即全设置为横杠
-reset:		clr tr0
-			mov count_value,#60
+reset:		mov count_value,#60
 			mov buf_add,#11
 			mov buf_add+1,#11
 			mov buf_add+2,#11
