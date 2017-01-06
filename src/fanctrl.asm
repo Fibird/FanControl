@@ -106,7 +106,11 @@ next_s:	mov c,p1.4
 		mov NOF,c
 		call bxrl
  		jnc min
-		dec count_value			;开关变化计数值减1
+		mov a,count_value
+		cjne a,#0,dec0
+		mov count_value,#60
+		inc count_value
+dec0:	dec count_value			;开关变化计数值减1
 		mov c,p1.4
 		mov bitbuff1,c
 		;call disp
@@ -133,7 +137,11 @@ next_m:	mov c,p1.2
 		mov NOF,c
 		call bxrl
  		jnc goon
-		dec count_value1			;开关变化计数值减1
+		mov a,count_value1
+		cjne a,#0,dec1
+		mov count_value1,#60
+		inc count_value1
+dec1:	dec count_value1			;开关变化计数值减1
 		mov c,p1.2
 		mov bitbuff3,c
 goon:  	setb tr0				;打开定时器0				
