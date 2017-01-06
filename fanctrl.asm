@@ -8,9 +8,11 @@
 		buf_add equ 79h
 		gear equ 50h		;存储档位
 		temp equ 51h		;临时存储区
-
-		haveCount bit 2dh  
-		
+		bitbuff bit 20h		;位缓冲区大小为3  
+		E bit 25h
+		F bit 26h
+		NOE bit 27h
+		NOF bit 28h
 		org 0000h
 		ljmp main
 
@@ -48,33 +50,77 @@ main:	mov sp,#30h				;设置栈顶
 		;setb tr0		;test
 		setb tr1				;启动定时器1				
 		clr f0					;开关机状态标志，默认关机
-		clr haveCount					
+		mov c,p1.5				
+		mov bitbuff,c
+		mov c,p1.4
+		mov bitbuff+1,c					
 ;-----------------------------
 ;循环检测开关，并扫描七段数码管
 here:	nop
 		clr f0	
 		jnb p1.7,here			;检测是否打开开关
 		setb f0
-		jnb p1.6,hset			;检测是否设置定时
-		call setTime
+		jnb p1.6,noset			;检测是否设置定时
+;定时时间设置
+set_t: 	mov c,p1.5
+		mov E,c
+		cpl c
+		mov NOE,c
+		mov c,bitbuff
+		mov F,c
+		cpl c
+		mov NOF,c
+		call bxrl
+		jnc next_b
+		mov a,r1
+		add a,#1
+		da a
+		mov r1,a
+		mov c,p1.5
+		mov bitbuff,c
+next_b:	mov c,p1.4
+		mov E,c
+		cpl c
+		mov NOE,c
+		mov c,bitbuff+1
+		mov F,c
+		cpl c
+		mov NOF,c
+		call bxrl
+ 		jnc goon
+		mov a,r1
+		add a,#-1
+		da a
+		mov r1,a
+		mov c,p1.4
+		mov bitbuff,c
+goon:  	setb tr0			;打开定时器0				
 		jmp get_g						
-hset:	call reset
+noset:	call reset
 get_g:	mov a,p1				;读取档位
 		anl a,#00000011b		;取低两位作为档位
 		mov gear,a							
 		call disp		  				
 		jmp here
 ;-------------------------------
-;定时时间设置
-setTime: 
-	 
-	   	setb tr0			;打开定时器0				
+;**************位异或程序*****************
+;功能:对两个位进行异或
+;输入参数:E，F, NOE, NOF
+;返回参数:CY
+;*****************************************
+bxrl:	mov c,f
+		anl c,NOE
+		mov bitbuff+2,c
+		mov c,E
+		anl c,NOF
+		orl c,bitbuff+2
 		ret
 ;***********计时程序*********************
 ;中断服务子程序0，主要负责定时时间的修改
 ;
 ;****************************************		
 isr_t0: push acc
+		push psw
 		jnb f0,ret0			;判断标志位
 		mov th0,#0bh
 		mov tl0,#0cdh		
@@ -94,7 +140,8 @@ check0:	cjne r1,#0,dec_f 		;到达定时时间
 		clr tr0
 		jmp ret0				
 dec_f:	dec r1
-ret0:	pop acc
+ret0:	pop psw
+		pop acc
 		reti
 ;**************七段数码管扫描程序****************
 ;主要负责扫描七段数码管的保证计时时间的正常显示，
