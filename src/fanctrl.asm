@@ -59,7 +59,7 @@ main:	mov sp,#30h				;设置栈顶
 		mov ie,#8ah				;允许定时器0和定时器1中断
 		setb pt0				;设置定时器1为高优先级
 		mov count_value,#60		;设置默认定时时间
-		setb tr0				;打开定时器0
+		;setb tr0				;打开定时器0
 		setb tr1				;启动定时器1				
 		clr f0					;开关机状态标志，默认关机
 		mov c,p1.5				;保存初始开关状态
