@@ -19,12 +19,13 @@
 		temp equ 51h		;临时存储区
 		bitbuff0 bit 20h.0	;位缓冲区
 		bitbuff1 bit 20h.1
-		bitbuff2 bit 21h.2
+		bitbuff2 bit 20h.2
 		bitbuff3 bit 20h.3 
 		E bit 20h.4			;异或程序的参数
 		F bit 20h.5
 		NOE bit 20h.6
 		NOF bit 20h.7
+		tempbit bit 21h.0
 ;==============================================
 		org 0000h
 		ljmp main
@@ -108,7 +109,7 @@ next_s:	mov c,p1.4
 		dec count_value			;开关变化计数值减1
 		mov c,p1.4
 		mov bitbuff1,c
-		call disp
+		;call disp
 min:	mov c,p1.3
 		mov E,c
 		cpl c
@@ -151,10 +152,10 @@ get_g:	mov a,p1				;读取档位
 ;*****************************************
 bxrl:	mov c,F
 		anl c,NOE
-		mov bitbuff2,c
+		mov tempbit,c
 		mov c,E
 		anl c,NOF
-		orl c,bitbuff2
+		orl c,tempbit
 		ret
 
 ;**************定时器0的中断服务子程序*****************
@@ -210,7 +211,8 @@ ret0:	pop psw
 ;输入参数：buf_add
 ;输出参数：无
 ;************************************************************
-disp:	mov r3,#0feh	  ;存放位码
+disp:	push psw
+		mov r3,#0feh	  ;存放位码
 		mov r0,#buf_add	  ;存放段码的地址
 loop1:	mov a,@r0	
 		mov dptr,#disdata
@@ -237,7 +239,8 @@ loop1:	mov a,@r0
 		movx @dptr,a
 		jmp loop1
 		
-ret1:	ret
+ret1:	pop psw
+		ret
 ;***********定时器1中断服务子程序**************
 ;功能：主要负责驱动电动机
 ;输入参数：gear
