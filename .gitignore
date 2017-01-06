@@ -6,3 +6,9 @@
 *.exe
 *.hex
 *.bak
+*.uvproj
+*.plg
+*.lnp
+*.M51
+fan
+*.uvopt
