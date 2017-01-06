@@ -10,19 +10,21 @@
 		pcon_add equ 0ff2bh
 		dac0832_add equ 0ff80h
 ;===============常用内存空间===================
-		int_times equ 0dh	;中断int_times次为1秒
+		int_times equ 04h	;中断int_times次为1秒
 		low_times equ 150	;低脉冲次数
 		count_value equ 60h	;计数值缓冲区
+		count_value1 equ 61h	;分钟
 		buf_add equ 79h		;数码管缓冲区首址
 		gear equ 50h		;存储档位
 		temp equ 51h		;临时存储区
-		bitbuff0 bit 00h	;位缓冲区
-		bitbuff1 bit 01h
-		bitbuff2 bit 02h  
-		E bit 20h			;异或程序的参数
-		F bit 21h
-		NOE bit 22h
-		NOF bit 23h
+		bitbuff0 bit 20h.0	;位缓冲区
+		bitbuff1 bit 20h.1
+		bitbuff2 bit 21h.2
+		bitbuff3 bit 20h.3 
+		E bit 20h.4			;异或程序的参数
+		F bit 20h.5
+		NOE bit 20h.6
+		NOF bit 20h.7
 ;==============================================
 		org 0000h
 		ljmp main
@@ -59,13 +61,19 @@ main:	mov sp,#30h				;设置栈顶
 		mov ie,#8ah				;允许定时器0和定时器1中断
 		setb pt0				;设置定时器1为高优先级
 		mov count_value,#60		;设置默认定时时间
+		mov count_value1,#2	;----test
 		;setb tr0				;打开定时器0
 		setb tr1				;启动定时器1				
 		clr f0					;开关机状态标志，默认关机
+		mov gear,#4h			;关闭LED灯
 		mov c,p1.5				;保存初始开关状态
 		mov bitbuff0,c			
 		mov c,p1.4				;保存初始开关状态
-		mov bitbuff1,c					
+		mov bitbuff1,c
+		mov c,p1.3				;保存初始开关状态
+		mov bitbuff2,c			
+		mov c,p1.2				;保存初始开关状态
+		mov bitbuff3,c					
 ;-----------------------------
 ;循环检测开关，并扫描七段数码管
 here:	nop
@@ -73,7 +81,7 @@ here:	nop
 		jnb p1.7,here			;检测是否打开开关
 		setb f0
 		jnb p1.6,noset			;检测是否设置定时
-
+		call disp
 set_t: 	mov c,p1.5				;定时时间设置
 		mov E,c
 		cpl c
@@ -83,11 +91,11 @@ set_t: 	mov c,p1.5				;定时时间设置
 		cpl c
 		mov NOF,c
 		call bxrl
-		jnc next_b
+		jnc next_s
 		inc count_value			;开关变化计数值加1	
 		mov c,p1.5
 		mov bitbuff0,c
-next_b:	mov c,p1.4
+next_s:	mov c,p1.4
 		mov E,c
 		cpl c
 		mov NOE,c
@@ -96,10 +104,37 @@ next_b:	mov c,p1.4
 		cpl c
 		mov NOF,c
 		call bxrl
- 		jnc goon
+ 		jnc min
 		dec count_value			;开关变化计数值减1
 		mov c,p1.4
 		mov bitbuff1,c
+		call disp
+min:	mov c,p1.3
+		mov E,c
+		cpl c
+		mov NOE,c
+		mov c,bitbuff2
+		mov F,c
+		cpl c
+		mov NOF,c
+		call bxrl
+ 		jnc next_m
+		inc count_value1			;开关变化计数值减1
+		mov c,p1.3
+		mov bitbuff2,c
+next_m:	mov c,p1.2
+		mov E,c
+		cpl c
+		mov NOE,c
+		mov c,bitbuff3
+		mov F,c
+		cpl c
+		mov NOF,c
+		call bxrl
+ 		jnc goon
+		dec count_value1			;开关变化计数值减1
+		mov c,p1.2
+		mov bitbuff3,c
 goon:  	setb tr0				;打开定时器0				
 		jmp get_g						
 noset:	call reset
@@ -139,20 +174,32 @@ isr_t0:
 		mov buf_add+0,b
 		mov buf_add+1,a
 
-		jnb f0,ret0			;判断标志位
+		mov r7,count_value1		;更新缓冲区内的值
+		mov a,r7
+		mov b,#10
+		div ab
+		mov buf_add+2,b
+		mov buf_add+3,a
+
+		jnb f0,ret0				;判断标志位
 		mov th0,#0bh
 		mov tl0,#0cdh		
 		mov r6,30h
 		dec r6
 		mov 30h,r6
-		cjne r6,#0,ret0
+		cjne r6,#0,ret0			;中断达到int_times次才给秒值减一
 
 next1:	mov 30h,#int_times		;重置中断次数
 
-check0:	cjne r1,#0,dec_f 		;到达定时时间
-		jmp ret0				
-dec_f:	dec r1
+check0:	cjne r1,#0,dec_s 		;到达定时时间
+		
+check1:	cjne r7,#0,dec_m
+		jmp ret0
+dec_m:	dec r7
+		mov r1,#60				
+dec_s:	dec r1
 		mov count_value,r1
+		mov count_value1,r7
 ;------------恢复现场--------------
 ret0:	pop psw
 		pop acc
@@ -206,6 +253,7 @@ motor_driv:
 			jnb f0,mstop
 			jnb p1.6,movit
 			mov a,count_value
+			add a,count_value1
 			jz mstop
 ;------------低电平脉冲--------------			
 movit:		mov a,temp+1
@@ -249,12 +297,13 @@ ret2:		pop psw
 			pop acc
 			reti
 
-;***********重置子程序*************************
+;***************重置子程序*********************
 ;功能：清除显示缓冲区，关闭定时器0
 ;输入参数：无
 ;输出参数：无
 ;**********************************************
 reset:		clr tr0
+			mov count_value1,#2
 			mov count_value,#60
 			mov buf_add,#11
 			mov buf_add+1,#11
@@ -265,6 +314,6 @@ reset:		clr tr0
 disdata: db 0c0h,0f9h,0a4h,0b0h,99h,92h,82h,0f8h,80h,90h,0ffh	;数码管字形码
 reset_sym: db 0bfh					;不设置定时时，7段数码管显示的符号
 gear_value: db 5,75,150,0  			;四个档位值
-gear_led: db 7fh,0bfh,0dfh,0efh	;四个档位对应的LED灯
+gear_led: db 7fh,0bfh,0dfh,0efh,0ffh	;四个档位对应的LED灯
 ;=====================================================
 		end	
