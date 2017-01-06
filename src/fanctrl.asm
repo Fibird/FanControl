@@ -65,6 +65,7 @@ here:	nop
 		jnb p1.7,here			;检测是否打开开关
 		setb f0
 		jnb p1.6,noset			;检测是否设置定时
+
 set_t: 	mov c,p1.5				;定时时间设置
 		mov E,c
 		cpl c
@@ -163,20 +164,20 @@ loop1:	mov a,@r0
 		mov a,r3			  
 		movx @dptr,a		;发送位码 
 
-delay0:	mov r5,#10h		 	;延时0
-loop2:	nop
-		djnz r5,loop2
+;delay0:	mov r5,#10h		 	;延时0
+;loop2:	nop
+;		djnz r5,loop2
 		
-		mov dptr,#pb_add	
-		mov a,#0ffh
-		movx @dptr,a
-		mov a,#00h			;消隐
+		;mov dptr,#pb_add	
+		;mov a,#0ffh
+		;movx @dptr,a
+		mov a,#0ffh			;消隐
 		mov dptr,#pa_add
 		movx @dptr,a
 
-		mov r5,#10h		 	;延时0
-loop3:	nop
-		djnz r5,loop3
+;		mov r5,#10h		 	;延时0
+;loop3:	nop
+;		djnz r5,loop3
 
 		inc r0
 		mov a,r3 
@@ -247,7 +248,8 @@ ret2:		pop psw
 			pop acc
 			reti
 ;将定时时间置位，即全设置为横杠
-reset:		mov count_value,#60
+reset:		clr tr0
+			mov count_value,#60
 			mov buf_add,#11
 			mov buf_add+1,#11
 			mov buf_add+2,#11
