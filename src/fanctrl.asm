@@ -12,11 +12,11 @@
 ;===============常用值===================
 		int_times equ 0dh	;中断int_times次为1秒
 		low_times equ 150	;低脉冲次数
-		default_min equ 5
-		default_sec equ 60
+		default_min equ 5	;默认分钟
+		default_sec equ 60	;默认秒钟
 ;===============常用内存空间===================
-		count_value equ 60h	;计数值缓冲区
-		count_value1 equ 61h	;分钟
+		sec_value equ 60h	;秒值缓冲区
+		min_value equ 61h;分值缓冲区
 		buf_add equ 79h		;数码管缓冲区首址
 		gear equ 50h		;存储档位
 		temp equ 51h		;临时存储区
@@ -64,8 +64,8 @@ main:	mov sp,#30h				;设置栈顶
 		mov tl1,#0fh
 		mov ie,#8ah				;允许定时器0和定时器1中断
 		setb pt0				;设置定时器1为高优先级
-		mov count_value,#60		;设置默认定时时间
-		mov count_value1,#2	;----test
+		mov sec_value,#default_sec	;设置默认的分钟
+		mov min_value,#default_min	;设置默认的秒钟
 		;setb tr0				;打开定时器0
 		setb tr1				;启动定时器1				
 		clr f0					;开关机状态标志，默认关机
@@ -110,11 +110,11 @@ set_t: 	push psw
 		mov NOF,c
 		call bxrl
 		jnc next_s
-		mov a,count_value
+		mov a,sec_value
 		cjne a,#60,inc0
-		mov count_value,#0
-		dec count_value
-inc0:	inc count_value			;开关变化计数值加1	
+		mov sec_value,#0
+		dec sec_value
+inc0:	inc sec_value			;开关变化计数值加1	
 		mov c,p1.5
 		mov bitbuff0,c
 next_s:	mov c,p1.4
@@ -127,11 +127,11 @@ next_s:	mov c,p1.4
 		mov NOF,c
 		call bxrl
  		jnc min
-		mov a,count_value
+		mov a,sec_value
 		cjne a,#0,dec0
-		mov count_value,#60
-		inc count_value
-dec0:	dec count_value			;开关变化计数值减1
+		mov sec_value,#60
+		inc sec_value
+dec0:	dec sec_value			;开关变化计数值减1
 		mov c,p1.4
 		mov bitbuff1,c
 		;call disp
@@ -145,11 +145,11 @@ min:	mov c,p1.3
 		mov NOF,c
 		call bxrl
  		jnc next_m
-		mov a,count_value1
+		mov a,min_value
 		cjne a,#60,inc1
-		mov count_value1,#0
-		dec count_value1
-inc1:	inc count_value1			;开关变化计数值减1
+		mov min_value,#0
+		dec min_value
+inc1:	inc min_value			;开关变化计数值减1
 		mov c,p1.3
 		mov bitbuff2,c
 next_m:	mov c,p1.2
@@ -162,11 +162,11 @@ next_m:	mov c,p1.2
 		mov NOF,c
 		call bxrl
  		jnc goon
-		mov a,count_value1
+		mov a,min_value
 		cjne a,#0,dec1
-		mov count_value1,#60
-		inc count_value1
-dec1:	dec count_value1			;开关变化计数值减1
+		mov min_value,#60
+		inc min_value
+dec1:	dec min_value			;开关变化计数值减1
 		mov c,p1.2
 		mov bitbuff3,c
 goon:  	setb tr0				;打开定时器0
@@ -188,22 +188,22 @@ bxrl:	mov c,F
 
 ;**************定时器0的中断服务子程序*****************
 ;功能：每隔1s修改计数值
-;输入参数：count_value
-;输出参数：buf_add+0， buf_add+1
+;输入参数：min_value, sec_value
+;输出参数：buf_add+0， buf_add+1, buf_add+2, buf_add+3
 ;******************************************************		
 isr_t0: 
 ;------------保护现场--------------
 		push acc
 		push psw
 ;----------------------------------
-		mov r1,count_value		;更新缓冲区内的值
+		mov r1,sec_value		;更新缓冲区内的值
 		mov a,r1
 		mov b,#10
 		div ab
 		mov buf_add+0,b
 		mov buf_add+1,a
 
-		mov r7,count_value1		;更新缓冲区内的值
+		mov r7,min_value		;更新缓冲区内的值
 		mov a,r7
 		mov b,#10
 		div ab
@@ -227,8 +227,8 @@ check1:	cjne r7,#0,dec_m
 dec_m:	dec r7
 		mov r1,#60				
 dec_s:	dec r1
-		mov count_value,r1
-		mov count_value1,r7
+		mov sec_value,r1
+		mov min_value,r7
 ;------------恢复现场--------------
 ret0:	pop psw
 		pop acc
@@ -283,8 +283,8 @@ motor_driv:
 ;----------------------------------
 			jnb f0,mstop
 			jnb p1.6,movit
-			mov a,count_value
-			add a,count_value1
+			mov a,sec_value
+			add a,min_value
 			jz mstop
 ;------------低电平脉冲--------------			
 movit:		mov a,temp+1
@@ -330,12 +330,12 @@ ret2:		pop psw
 
 ;***************重置子程序*********************
 ;功能：清除显示缓冲区，关闭定时器0
-;输入参数：无
-;输出参数：无
+;输入参数：buf_add
+;输出参数：buf_add
 ;**********************************************
 reset:		clr tr0
-			mov count_value1,#default_min
-			mov count_value,#default_sec
+			mov min_value,#default_min
+			mov sec_value,#default_sec
 			mov buf_add,#11
 			mov buf_add+1,#11
 			mov buf_add+2,#11
