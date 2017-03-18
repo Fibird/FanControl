@@ -32,3 +32,5 @@
 # 电路图
 
 下面是控制器的电路图：
+
+[详细电路图](https://github.com/Sunlcy/FanControl/blob/master/circuit/circuit.PDF)

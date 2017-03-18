@@ -1,9 +1,24 @@
-;*************************************************
-;Copyright(c) 2017 西北农林科技大学信息工程学院
-;名称：电风扇控制程序
-;作者：刘朝洋
-;日期：2017年1月7日
-;*************************************************
+;***********************************************************************
+; Author: Chaoyang Liu
+; E-main: chaoyanglius@outlook.com
+;
+; Software License Agreement (GPL License)
+; A program contolling electric fan
+; Copyright (c) 2016, Chaoyang Liu
+;
+; This program is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;************************************************************************/
 ;================各端口地址====================
 		pa_add equ 0ff28h				
 		pb_add equ 0ff29h
@@ -33,7 +48,7 @@
 ;==============================================
 		org 0000h
 		ljmp main
-;=============中断向量表=================
+;=============中断向量表=======================
 		org 000bh		;定时器0中断
 		ljmp isr_t0
 		org 001bh		;定时器1中断
